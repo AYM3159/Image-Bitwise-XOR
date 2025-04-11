@@ -133,7 +133,14 @@
       // Show the XOR and rgbotp image buttons based on the conditions
       document.getElementById('xorBtn').style.display = 'none';
       document.getElementById('downloadXOR').style.display = 'inline-block';
-      document.getElementById('downloadrgbotp').style.display = 'inline-block';
+
+	  // Show RGB OTP download button only if one image was missing (i.e., OTP was used)
+	  if (!img1 || !img2) {
+	    document.getElementById('downloadrgbotp').style.display = 'inline-block';
+	  } else {
+	    document.getElementById('downloadrgbotp').style.display = 'none';
+	  }
+
     }
 
     // Event listeners to show XOR button once images are loaded or checkbox checked
