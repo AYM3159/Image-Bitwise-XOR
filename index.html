@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Image Bitwise XOR</title>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; background: #f5f5f5; }
+    input[type="file"] { margin-bottom: 1rem; }
+    canvas { border: 1px solid #ccc; margin-top: 1rem; display: block; }
+    button { margin-right: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Image Bitwise XOR: Pixel Manipulation</h1>
+  <p>If only one image is uploaded, an RGB one-time pad will be generated for XOR.
+  <br><br>
+  If image dimensions differ, you will be prompted to choose output dimensions.</p>
+  <br>
+  <input type="file" id="img1" accept="image/*" />
+  <input type="file" id="img2" accept="image/*" />
+  <br />
+  <button id="xorBtn" onclick="xorImages()" style="display:none;">XOR Images</button>
+  <button id="downloadXOR" style="display:none;" onclick="downloadCanvas('xor-result.png')">Download XOR Result</button>
+  <button id="downloadrgbotp" style="display:none;" onclick="downloadCanvas('rgb-otp.png', 'rgbotpCanvas')">Download RGB One-time Pad</button>
+  <br />
+  <canvas id="resultCanvas"></canvas>
+  <canvas id="rgbotpCanvas" style="display: none;"></canvas>
+
+  <script>
+    function loadImage(file) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = URL.createObjectURL(file);
+      });
+    }
+
+    function resizeImage(img, width, height) {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(img, 0, 0, width, height);
+      return ctx.getImageData(0, 0, width, height);
+    }
+
+    function generateRandomImageData(width, height) {
+      const canvas = document.getElementById('rgbotpCanvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = width;
+      canvas.height = height;
+      const imageData = ctx.createImageData(width, height);
+      for (let i = 0; i < imageData.data.length; i += 4) {
+        imageData.data[i] = Math.floor(Math.random() * 256);     // Red
+        imageData.data[i + 1] = Math.floor(Math.random() * 256); // Green
+        imageData.data[i + 2] = Math.floor(Math.random() * 256); // Blue
+        imageData.data[i + 3] = 255;                             // Alpha
+      }
+      ctx.putImageData(imageData, 0, 0);
+      return imageData;
+    }
+
+    function downloadCanvas(filename, canvasId = 'resultCanvas') {
+      const canvas = document.getElementById(canvasId);
+      const link = document.createElement('a');
+      link.download = filename;
+      link.href = canvas.toDataURL();
+      link.click();
+    }
+
+    async function xorImages() {
+      const file1 = document.getElementById('img1').files[0];
+      const file2 = document.getElementById('img2').files[0];
+
+      if (!file1 && !file2) {
+        alert('Please upload at least one image.');
+        return;
+      }
+
+      const img1 = file1 ? await loadImage(file1) : null;
+      const img2 = file2 ? await loadImage(file2) : null;
+
+      let width, height;
+      if (img1 && img2) {
+        if (img1.width !== img2.width || img1.height !== img2.height) {
+          const choice = prompt(
+            `Images are different sizes:\nImage 1: ${img1.width}x${img1.height}\nImage 2: ${img2.width}x${img2.height}\n\nWhich image dimensions should be used? Enter 1 or 2:`
+          );
+          if (choice === '1') {
+            width = img1.width;
+            height = img1.height;
+          } else if (choice === '2') {
+            width = img2.width;
+            height = img2.height;
+          } else {
+            alert('Invalid choice.');
+            return;
+          }
+        } else {
+          width = img1.width;
+          height = img1.height;
+        }
+      } else if (img1) {
+        width = img1.width;
+        height = img1.height;
+      } else if (img2) {
+        width = img2.width;
+        height = img2.height;
+      }
+
+      const canvas = document.getElementById('resultCanvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = width;
+      canvas.height = height;
+
+      const data1 = img1 ? resizeImage(img1, width, height) : generateRandomImageData(width, height);
+      const data2 = img2 ? resizeImage(img2, width, height) : generateRandomImageData(width, height);
+
+      const resultData = ctx.createImageData(width, height);
+      for (let i = 0; i < data1.data.length; i++) {
+        if ((i + 1) % 4 === 0) {
+          resultData.data[i] = 255; // Fully opaque alpha
+        } else {
+          resultData.data[i] = data1.data[i] ^ data2.data[i];
+        }
+      }
+
+      ctx.putImageData(resultData, 0, 0);
+
+      // Show the XOR and rgbotp image buttons based on the conditions
+      document.getElementById('xorBtn').style.display = 'none';
+      document.getElementById('downloadXOR').style.display = 'inline-block';
+      document.getElementById('downloadrgbotp').style.display = 'inline-block';
+    }
+
+    // Event listeners to show XOR button once images are loaded or checkbox checked
+    document.getElementById('img1').addEventListener('change', toggleXorButton);
+    document.getElementById('img2').addEventListener('change', toggleXorButton);
+
+    function toggleXorButton() {
+      const file1 = document.getElementById('img1').files[0];
+      const file2 = document.getElementById('img2').files[0];
+
+      if ((file1 && file2) || (file1 && !file2)) {
+        document.getElementById('xorBtn').style.display = 'inline-block';
+      } else {
+        document.getElementById('xorBtn').style.display = 'none';
+      }
+    }
+  </script>
+</body>
+</html>
